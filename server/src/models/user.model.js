@@ -26,20 +26,6 @@ const userSchema = new mongoose.Schema(
         message: "password is not strong",
       },
     },
-    otp: {
-      type: String,
-    },
-    otpExpiry: {
-      type: Date,
-    },
-    otpPurpose: {
-      type: String,
-      enum: ["registration", "login", "password-reset"],
-    },
-    otpAttempts: {
-      type: Number,
-      default: 0,
-    },
     isVerified: {
       type: Boolean,
       default: false,

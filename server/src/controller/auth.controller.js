@@ -1,12 +1,13 @@
 import { ENV } from "../config/env.js";
 import User from "../models/user.model.js";
+import OTP from "../models/otp.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiRersponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import validator from "validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { hashOtp, verifyOTP, isOTPExpired } from "../utils/otp.js";
+import { hashOtp, verifyOTP } from "../utils/otp.js";
 import { sendOtpEmail } from "../services/email.service.js";
 
 const isProduction = ENV.node_env === "production";
@@ -54,31 +55,33 @@ export const sigUp = asyncHandler(async (req, res) => {
 
   const otp = generateOTP();
   const hashedOtp = hashOtp(otp);
-  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
   let user;
   if (existingUser) {
     user = existingUser;
     user.name = name;
     user.password = password;
-    user.otp = hashedOtp;
-    user.otpExpiry = otpExpiry;
-    user.otpPurpose = "registration";
-    user.otpAttempts = 0;
     await user.save();
   } else {
     user = await User.create({
       name,
       email: normalizedEmail,
       password,
-      otp: hashedOtp,
-      otpExpiry,
-      otpPurpose: "registration",
       isVerified: false,
     });
   }
 
-  await sendOtpEmail(normalizedEmail, otp, "registration");
+  // Delete any existing OTP for this email and purpose
+  await OTP.deleteMany({ email: normalizedEmail, purpose: "signup" });
+
+  // Create new OTP entry with TTL
+  await OTP.create({
+    email: normalizedEmail,
+    otp: hashedOtp,
+    purpose: "signup",
+  });
+
+  await sendOtpEmail(normalizedEmail, otp, "signup");
 
   return res
     .status(200)
@@ -99,43 +102,53 @@ export const verifyRegistrationOTP = asyncHandler(async (req, res) => {
   if (!email || !otp) {
     throw new ApiError(400, "Email and OTP are required");
   }
-  const user = await User.findOne({
-    email: normalizedEmail,
-    otpPurpose: "registration",
-  });
+
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
-    throw new ApiError(404, "User not found or OTP not requested");
+    throw new ApiError(404, "User not found");
   }
   if (user.isVerified) {
     throw new ApiError(400, "User already verified");
   }
-  if (user.otpAttempts >= 5) {
+
+  const otpRecord = await OTP.findOne({
+    email: normalizedEmail,
+    purpose: "signup",
+  });
+
+  if (!otpRecord) {
+    throw new ApiError(
+      400,
+      "OTP has expired or not requested. Please request a new one.",
+    );
+  }
+
+  if (otpRecord.attempts >= 5) {
+    await OTP.deleteOne({ _id: otpRecord._id });
     throw new ApiError(
       429,
       "Too many failed attempts. Please request a new OTP.",
     );
   }
-  if (isOTPExpired(user.otpExpiry)) {
-    throw new ApiError(400, "OTP has expired. Please request a new one.");
-  }
-  if (!verifyOTP(otp, user.otp)) {
-    user.otpAttempts += 1;
-    await user.save({ validateBeforeSave: true });
+
+  if (!verifyOTP(otp, otpRecord.otp)) {
+    otpRecord.attempts += 1;
+    await otpRecord.save();
     throw new ApiError(
       400,
-      `Invalid OTP.${5 - user.otpAttempts} attempts remaining.`,
+      `Invalid OTP. ${5 - otpRecord.attempts} attempts remaining.`,
     );
   }
+
+  // OTP verified successfully
   user.isVerified = true;
-  user.otp = undefined;
-  user.otpExpiry = undefined;
-  user.otpPurpose = undefined;
-  user.otpAttempts = 0;
 
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
   user.refreshToken = refreshToken;
   await user.save();
+
+  await OTP.deleteOne({ _id: otpRecord._id });
 
   const accessTokenOptions = {
     httpOnly: true,
@@ -170,15 +183,17 @@ export const resendOTP = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(404, "User not found");
   }
+
   const otp = generateOTP();
   const hashedOTP = hashOtp(otp);
-  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-  user.otp = hashedOTP;
-  user.otpExpiry = otpExpiry;
-  user.otpPurpose = purpose;
-  user.otpAttempts = 0;
-  await user.save({ validateBeforeSave: false });
+  await OTP.deleteMany({ email: normalizedEmail, purpose });
+
+  await OTP.create({
+    email: normalizedEmail,
+    otp: hashedOTP,
+    purpose,
+  });
 
   await sendOtpEmail(normalizedEmail, otp, purpose);
 
