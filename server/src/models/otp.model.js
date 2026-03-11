@@ -15,7 +15,7 @@ const otpSchema = new mongoose.Schema(
     purpose: {
       type: String,
       required: true,
-      enum: ["signup", "signin", "password-reset"],
+      enum: ["signup", "password-reset"],
     },
     attempts: {
       type: Number,
@@ -30,7 +30,6 @@ const otpSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Compound index for efficient queries
 otpSchema.index({ email: 1, purpose: 1 });
 
 const OTP = mongoose.model("OTP", otpSchema);

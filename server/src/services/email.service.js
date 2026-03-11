@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
 import { ENV } from "../config/env.js";
 
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -12,14 +11,12 @@ const transporter = nodemailer.createTransport({
 
 export const sendOTPEmail = async (email, otp, purpose) => {
   const subject = {
-    registration: "Verify Your Account",
-    login: "Your Login Verification Code",
+    signup: "Verify Your Account",
     "password-reset": "Reset Your Password",
   }[purpose];
 
   const message = {
-    registration: `Your verification code is: ${otp}. This code will expire in 10 minutes.`,
-    login: `Your login verification code is: ${otp}. This code will expire in 5 minutes.`,
+    singup: `Your verification code is: ${otp}. This code will expire in 10 minutes.`,
     "password-reset": `Your password reset code is: ${otp}. This code will expire in 10 minutes.`,
   }[purpose];
 
