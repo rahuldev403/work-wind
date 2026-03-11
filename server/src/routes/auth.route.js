@@ -4,9 +4,14 @@ import {
   signIn,
   signOut,
   sigUp,
+  verifyRegistrationOTP,
+  forgotPassword,
+  resetPassword,
+  resendOTP,
 } from "../controller/auth.controller.js";
 import rateLimit from "express-rate-limit";
 import { requireAuth } from "../middlewares/auth.middleware.js";
+import ApiResponse from "../utils/ApiRersponse.js";
 
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -17,6 +22,10 @@ const authLimiter = rateLimit({
 const authRoute = express.Router();
 
 authRoute.post("/signup", sigUp);
+authRoute.post("/verify-registration", verifyRegistrationOTP);
+authRoute.post("/forgot-password", forgotPassword);
+authRoute.post("/reset-password", resetPassword);
+authRoute.post("/resend-otp", resendOTP);
 authRoute.post("/signin", authLimiter, signIn);
 authRoute.post("/refresh", refresh);
 authRoute.post("/signout", signOut);
