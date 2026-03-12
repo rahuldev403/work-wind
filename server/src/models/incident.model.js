@@ -46,6 +46,12 @@ const incidentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    upvotedBy: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     createdAt: {
       type: Date,
       default: Date.now,

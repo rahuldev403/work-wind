@@ -5,12 +5,16 @@ import {
   createIncidentService,
   getAllIncidentsService,
   getIncidentByIdService,
+  upvoteAndValidate,
 } from "../services/incident.service.js";
 import mongoose from "mongoose";
 
 export const createIncident = asyncHandler(async (req, res) => {
   const { title, description, location, type, severity, media } = req.body;
-
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(401, "Authentication required");
+  }
   if (!title || !description || !location || !type) {
     throw new ApiError(
       400,
@@ -33,7 +37,7 @@ export const createIncident = asyncHandler(async (req, res) => {
     },
     type,
     severity: severity || "controllable",
-    reportedBy: req.user._id,
+    reportedBy: user._id,
     media: media || null,
   };
 
@@ -102,4 +106,24 @@ export const getIncidentById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, incidentById, "Incident fetched successfully"));
+});
+
+export const upvoteIncidentById = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const userId = req.user._id;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Not a valid id");
+  }
+  if (!userId) {
+    throw new ApiError(401, "Authentication required");
+  }
+  const result = await upvoteAndValidate(id, userId);
+
+  if (!result) {
+    throw new ApiError(404, "Incident not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Activity successful"));
 });

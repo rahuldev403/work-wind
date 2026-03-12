@@ -22,6 +22,35 @@ export const getAllIncidentsService = async (
 };
 
 export const getIncidentByIdService = async (id) => {
-  const incident = await Incident.findById(id).populate("reportedBy", "name email");
+  const incident = await Incident.findById(id).populate(
+    "reportedBy",
+    "name email",
+  );
   return incident;
+};
+
+export const upvoteAndValidate = async (incidentId, userId) => {
+  const incident = await Incident.findById(incidentId);
+  if (!incident) return null;
+  const alreadyUpvoted = incident.upvotedBy.includes(userId);
+
+  if (alreadyUpvoted) {
+    return await Incident.findOneAndUpdate(
+      incidentId,
+      {
+        $inc: { upvotes: -1 },
+        $pull: { upvotedBy: userId },
+      },
+      { new: true },
+    ).populate("reportedBy", "name email");
+  } else {
+    return await Incident.findOneAndUpdate(
+      incidentId,
+      {
+        $inc: { upvotes: +1 },
+        $addToSet: { upvotedBy: userId },
+      },
+      { new: true },
+    ).populate("reportedBy", "name email");
+  }
 };
