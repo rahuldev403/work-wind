@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import { ENV } from "./config/env.js";
 import authRoute from "./routes/auth.route.js";
+import incidentRoute from "./routes/incident.routes.js";
 const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -23,3 +24,4 @@ app.use(
   }),
 );
 app.use("/api/auth", authRoute);
+app.use("/api/incidents", incidentRoute);
