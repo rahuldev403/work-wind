@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUp, Clock3, Github, Radar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import AuthModal from "../components/AuthModal";
 
 const featureCards = [
   {
@@ -111,6 +112,7 @@ function SectionReveal({ children, className = "", id }) {
 
 function LandingPage() {
   const [showTop, setShowTop] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     const onScroll = () =>
@@ -182,15 +184,15 @@ function LandingPage() {
               </p>
 
               <div className="mt-5 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:gap-4">
-                <motion.a
-                  href="#demo"
+                <motion.button
+                  onClick={() => setShowAuth(true)}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:shadow-primary/35 sm:px-6 sm:py-3.5"
                 >
                   Get Started
                   <ArrowRight className="h-4 w-4" />
-                </motion.a>
+                </motion.button>
                 <motion.a
                   href="#features"
                   whileHover={{ scale: 1.03 }}
@@ -551,15 +553,15 @@ function LandingPage() {
                   Join a platform built to help neighborhoods, campuses, and
                   local communities move faster when safety matters most.
                 </p>
-                <motion.a
-                  href="#"
+                <motion.button
+                  onClick={() => setShowAuth(true)}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-white/10"
                 >
                   Get Started
                   <ArrowRight className="h-4 w-4" />
-                </motion.a>
+                </motion.button>
               </div>
             </motion.div>
           </SectionReveal>
@@ -626,6 +628,7 @@ function LandingPage() {
           </motion.button>
         )}
       </AnimatePresence>
+      <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />
     </main>
   );
 }
