@@ -27,6 +27,7 @@ function ReportPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -35,11 +36,13 @@ function ReportPage() {
   const captureCurrentLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported in this browser.");
+      setPermissionDenied(true);
       return;
     }
 
     setIsLocating(true);
     setError("");
+    setPermissionDenied(false);
 
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
@@ -49,12 +52,29 @@ function ReportPage() {
           longitude: String(coords.longitude),
         }));
         setIsLocating(false);
+        setPermissionDenied(false);
       },
-      () => {
+      (positionError) => {
         setIsLocating(false);
-        setError(
-          "Unable to fetch your location. Please allow location access.",
-        );
+
+        if (positionError.code === 1) {
+          setError(
+            "⚠️ Location permission denied. Please enable location access in your browser settings to submit an incident.",
+          );
+          setPermissionDenied(true);
+        } else if (positionError.code === 2) {
+          setError(
+            "Location data is unavailable. Please try again in a moment.",
+          );
+          setPermissionDenied(true);
+        } else if (positionError.code === 3) {
+          // TIMEOUT
+          setError("Location request timed out. Please try again.");
+          setPermissionDenied(true);
+        } else {
+          setError("Unable to fetch your location. Please try again.");
+          setPermissionDenied(true);
+        }
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
@@ -70,7 +90,15 @@ function ReportPage() {
     setSuccess("");
 
     if (!form.latitude || !form.longitude) {
-      setError("Location is required. Please allow location access.");
+      if (permissionDenied) {
+        setError(
+          "⚠️ Location permission is required. Please enable location access in your browser settings and refresh the page.",
+        );
+      } else {
+        setError(
+          "Location is required. Please click 'Use Current Location' to get your position.",
+        );
+      }
       return;
     }
 
@@ -190,56 +218,64 @@ function ReportPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                    Latitude
-                  </label>
-                  {isLocating ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                      <LoaderCircle size={11} className="animate-spin" />
-                      Fetching
-                    </span>
-                  ) : null}
-                </div>
-                <div className="relative">
-                  <MapPin
-                    size={14}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                  />
-                  <input
-                    value={form.latitude}
-                    readOnly
-                    placeholder={isLocating ? "Fetching..." : "Auto-filled"}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/6 pl-9 pr-3 text-sm text-white/85 outline-none"
-                  />
-                </div>
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                  Location
+                </label>
+                {isLocating ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                    <LoaderCircle size={11} className="animate-spin" />
+                    Fetching
+                  </span>
+                ) : permissionDenied ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-400">
+                    <TriangleAlert size={11} />
+                    Permission Denied
+                  </span>
+                ) : form.latitude && form.longitude ? (
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-400">
+                    ✓ Captured
+                  </span>
+                ) : null}
               </div>
-
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                    Longitude
-                  </label>
-                  {isLocating ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                      <LoaderCircle size={11} className="animate-spin" />
-                      Fetching
-                    </span>
-                  ) : null}
-                </div>
-                <div className="relative">
+              <div
+                className={`relative rounded-xl border p-3 ${
+                  isLocating
+                    ? "border-white/20 bg-white/[0.04]"
+                    : permissionDenied
+                      ? "border-red-500/30 bg-red-500/10"
+                      : form.latitude && form.longitude
+                        ? "border-emerald-500/30 bg-emerald-500/10"
+                        : "border-white/10 bg-white/6"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
                   <MapPin
                     size={14}
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                    className={`${
+                      permissionDenied ? "text-red-400" : "text-white/60"
+                    }`}
                   />
-                  <input
-                    value={form.longitude}
-                    readOnly
-                    placeholder={isLocating ? "Fetching..." : "Auto-filled"}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/6 pl-9 pr-3 text-sm text-white/85 outline-none"
-                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      isLocating
+                        ? "text-white/50"
+                        : permissionDenied
+                          ? "text-red-300"
+                          : form.latitude && form.longitude
+                            ? "text-emerald-300"
+                            : "text-white/70"
+                    }`}
+                  >
+                    {isLocating
+                      ? "Fetching location..."
+                      : permissionDenied
+                        ? "Permission denied"
+                        : form.latitude && form.longitude
+                          ? `${form.latitude}, ${form.longitude}`
+                          : "Waiting for location..."}
+                  </span>
                 </div>
               </div>
             </div>
@@ -255,11 +291,19 @@ function ReportPage() {
                 {isLocating ? "Fetching location..." : "Use Current Location"}
               </button>
 
-              <span className="text-xs text-white/55">
-                {form.latitude && form.longitude
-                  ? "Location captured automatically"
-                  : "Waiting for location permission"}
-              </span>
+              {permissionDenied ? (
+                <span className="text-xs font-medium text-red-300">
+                  ❌ Location permission required to proceed
+                </span>
+              ) : form.latitude && form.longitude ? (
+                <span className="text-xs text-emerald-300">
+                  ✓ Location captured automatically
+                </span>
+              ) : (
+                <span className="text-xs text-white/55">
+                  Waiting for location...
+                </span>
+              )}
             </div>
 
             {error ? (
