@@ -660,7 +660,15 @@ function LandingPage() {
           </motion.button>
         )}
       </AnimatePresence>
-      <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} />
+      <AuthModal
+        isOpen={showAuth}
+        onClose={() => {
+          setShowAuth(false);
+          if (isAuthenticated) {
+            navigate("/feed");
+          }
+        }}
+      />
     </main>
   );
 }

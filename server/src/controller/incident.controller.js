@@ -10,6 +10,7 @@ import {
 import mongoose from "mongoose";
 import { emitIncidentNearby } from "../sockets/socket.js";
 import { categorizeIncidentDescription } from "../services/ai.service.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 const shouldCategorizeDescription = (description) => {
   if (typeof description !== "string") {
@@ -154,4 +155,38 @@ export const upvoteIncidentById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, result, "Activity successful"));
+});
+
+export const uploadMedia = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  if (!user) {
+    throw new ApiError(401, "Authentication required");
+  }
+
+  if (!req.files || !req.files.file) {
+    throw new ApiError(400, "No file provided");
+  }
+
+  const file = req.files.file;
+  const maxSize = 100 * 1024 * 1024;
+
+  if (file.size > maxSize) {
+    throw new ApiError(400, "File size exceeds 100MB limit");
+  }
+
+  const mimeType = file.mimetype;
+  let resourceType = "auto";
+
+  if (mimeType.startsWith("image/")) {
+    resourceType = "image";
+  } else if (mimeType.startsWith("video/")) {
+    resourceType = "video";
+  }
+
+  const mediaUrl = await uploadToCloudinary(file.data, file.name, resourceType);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { mediaUrl }, "File uploaded successfully"));
 });

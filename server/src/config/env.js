@@ -11,4 +11,7 @@ export const ENV = {
   email_password: process.env.EMAIL_PASSWORD,
   gemini_key: process.env.GEMINI_API_KEY,
   gemini_model: process.env.GEMINI_MODEL,
+  cloudinary_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloudinary_key: process.env.CLOUDINARY_API_KEY,
+  cloudinary_secret: process.env.CLOUDINARY_API_SECRET,
 };

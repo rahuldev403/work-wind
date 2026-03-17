@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import cors from "cors";
+import fileUpload from "express-fileupload";
 import { ENV } from "./config/env.js";
 import authRoute from "./routes/auth.route.js";
 import incidentRoute from "./routes/incident.routes.js";
@@ -17,6 +18,7 @@ export const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(globalRateLimiter);
+app.use(fileUpload());
 app.use(
   cors({
     origin: ENV.client_url || "http://localhost:5173",

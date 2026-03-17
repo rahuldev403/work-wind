@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -319,178 +320,8 @@ function ToastStack({ toasts, onRemove }) {
   );
 }
 
-function ReportIncidentModal({ open, onClose, onSubmitted }) {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    type: "other",
-    media: "",
-    latitude: "",
-    longitude: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setForm((prev) => ({
-          ...prev,
-          latitude: String(coords.latitude),
-          longitude: String(coords.longitude),
-        }));
-      },
-      () => {},
-    );
-  }, [open]);
-
-  if (!open) return null;
-
-  const handleChange = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setFormError("");
-
-    const lat = Number(form.latitude);
-    const lng = Number(form.longitude);
-
-    if (!form.title.trim() || !form.description.trim()) {
-      setFormError("Title and description are required.");
-      return;
-    }
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      setFormError("Valid latitude and longitude are required.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await api.post("/incidents", {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        media: form.media.trim() || null,
-        type: form.type,
-        location: {
-          coordinates: [lng, lat],
-        },
-      });
-      setIsSubmitting(false);
-      onSubmitted();
-      onClose();
-      setForm({
-        title: "",
-        description: "",
-        type: "other",
-        media: "",
-        latitude: "",
-        longitude: "",
-      });
-    } catch (error) {
-      setIsSubmitting(false);
-      setFormError(
-        error?.response?.data?.message || "Failed to submit incident.",
-      );
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
-      >
-        <motion.form
-          initial={{ opacity: 0, y: 16, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.98 }}
-          onSubmit={onSubmit}
-          className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950/95 p-5 shadow-2xl"
-        >
-          <h2 className="text-xl font-bold text-white">Report Incident</h2>
-          <p className="mt-1 text-sm text-white/55">
-            Help your community stay safe in real-time.
-          </p>
-
-          <div className="mt-5 grid gap-3">
-            <input
-              value={form.title}
-              onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="Title"
-              className="h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/25"
-            />
-            <textarea
-              value={form.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              placeholder="Describe the incident"
-              rows={4}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-white/25"
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <FilterDropdown
-                value={form.type}
-                options={REPORT_TYPE_OPTIONS}
-                onChange={(val) => handleChange("type", val)}
-              />
-              <input
-                value={form.media}
-                onChange={(e) => handleChange("media", e.target.value)}
-                placeholder="Image URL (optional)"
-                className="h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-white outline-none focus:border-white/25"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                value={form.latitude}
-                onChange={(e) => handleChange("latitude", e.target.value)}
-                placeholder="Latitude"
-                className="h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-white outline-none focus:border-white/25"
-              />
-              <input
-                value={form.longitude}
-                onChange={(e) => handleChange("longitude", e.target.value)}
-                placeholder="Longitude"
-                className="h-9 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-white outline-none focus:border-white/25"
-              />
-            </div>
-          </div>
-
-          {formError ? (
-            <p className="mt-3 text-xs text-red-300">{formError}</p>
-          ) : null}
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/75 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:shadow-primary/35 disabled:opacity-60"
-            >
-              <Plus size={14} />
-              {isSubmitting ? "Submitting..." : "Submit Incident"}
-            </button>
-          </div>
-        </motion.form>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
 export default function FeedPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const {
@@ -507,7 +338,6 @@ export default function FeedPage() {
   } = useIncidentStore();
 
   const [isConnected, setIsConnected] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
@@ -620,7 +450,7 @@ export default function FeedPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowReportModal(true)}
+                onClick={() => navigate("/report")}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:shadow-primary/35"
               >
                 <Plus size={14} />
@@ -802,12 +632,6 @@ export default function FeedPage() {
             ) : null}
           </motion.section>
         </main>
-
-        <ReportIncidentModal
-          open={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          onSubmitted={handleRefresh}
-        />
       </div>
     </main>
   );

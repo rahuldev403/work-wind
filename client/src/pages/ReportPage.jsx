@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Crosshair,
@@ -9,6 +9,8 @@ import {
   MapPin,
   Send,
   TriangleAlert,
+  Upload,
+  X,
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -25,12 +27,38 @@ function ReportPage() {
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [permissionDenied, setPermissionDenied] = useState(false);
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFileUpload = async (file) => {
+    try {
+      setIsUploading(true);
+      setError("");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.post("/incidents/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.data?.data?.mediaUrl) {
+        updateField("media", response.data.data.mediaUrl);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to upload file");
+      console.error("Upload error:", err);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const captureCurrentLocation = () => {
@@ -165,96 +193,139 @@ function ReportPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl backdrop-blur-xl sm:p-6"
+          className="grid gap-8 lg:grid-cols-2"
         >
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Submit a Safety Report
-          </h1>
-          <p className="mt-1 text-sm text-white/55">
-            Share incident details so nearby users can be alerted quickly.
-          </p>
+          {/* Form Section */}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              Submit a Safety Report
+            </h1>
+            <p className="mt-1 text-sm text-white/55">
+              Share incident details so nearby users can be alerted quickly.
+            </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                Title
-              </label>
-              <input
-                value={form.title}
-                onChange={(e) => updateField("title", e.target.value)}
-                placeholder="Example: Suspicious activity near bus stop"
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/6 px-3 text-sm text-white outline-none transition focus:border-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                Description
-              </label>
-              <textarea
-                rows={5}
-                value={form.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Describe what happened, what you observed, and any urgent details."
-                className="w-full rounded-xl border border-white/10 bg-white/6 px-3 py-2.5 text-sm text-white outline-none transition focus:border-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                Media URL (optional)
-              </label>
-              <div className="relative">
-                <ImageIcon
-                  size={14}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                />
-                <input
-                  value={form.media}
-                  onChange={(e) => updateField("media", e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="h-11 w-full rounded-xl border border-white/10 bg-white/6 pl-9 pr-3 text-sm text-white outline-none transition focus:border-white/30"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
-                  Location
+            <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+              {/* Title */}
+              <div className="group relative">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                  Title
                 </label>
-                {isLocating ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                    <LoaderCircle size={11} className="animate-spin" />
-                    Fetching
-                  </span>
-                ) : permissionDenied ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-400">
-                    <TriangleAlert size={11} />
-                    Permission Denied
-                  </span>
-                ) : form.latitude && form.longitude ? (
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-400">
-                    ✓ Captured
-                  </span>
-                ) : null}
+                <input
+                  value={form.title}
+                  onChange={(e) => updateField("title", e.target.value)}
+                  placeholder="Example: Suspicious activity near bus stop"
+                  className="w-full border-0 border-b border-white/18 bg-transparent py-3 px-0 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-primary/75"
+                />
               </div>
-              <div
-                className={`relative rounded-xl border p-3 ${
-                  isLocating
-                    ? "border-white/20 bg-white/[0.04]"
-                    : permissionDenied
-                      ? "border-red-500/30 bg-red-500/10"
-                      : form.latitude && form.longitude
-                        ? "border-emerald-500/30 bg-emerald-500/10"
-                        : "border-white/10 bg-white/6"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
+
+              {/* Description */}
+              <div className="group relative">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                  Description
+                </label>
+                <textarea
+                  rows={4}
+                  value={form.description}
+                  onChange={(e) => updateField("description", e.target.value)}
+                  placeholder="Describe what happened, what you observed, and any urgent details."
+                  className="w-full border-0 border-b border-white/18 bg-transparent py-3 px-0 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-primary/75 resize-none"
+                />
+              </div>
+
+              {/* Media Upload */}
+              <div>
+                <label className="mb-3 block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                  Media (optional)
+                </label>
+                {form.media ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative rounded-lg border border-white/18 bg-white/[0.02] p-3 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2 flex-1">
+                      <ImageIcon size={16} className="text-emerald-400" />
+                      <span className="text-sm text-emerald-300 truncate">
+                        {form.media.split("/").pop()?.substring(0, 30) ||
+                          "Image uploaded"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateField("media", "")}
+                      className="text-white/40 hover:text-white/75 transition"
+                    >
+                      <X size={16} />
+                    </button>
+                  </motion.div>
+                ) : (
+                  <label className="block">
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,video/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleFileUpload(e.target.files[0]);
+                        }
+                      }}
+                      disabled={isUploading}
+                    />
+                    <div className="cursor-pointer rounded-lg border border-dashed border-white/25 bg-white/[0.02] py-6 text-center transition hover:border-primary/50 hover:bg-primary/5 group">
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload
+                          size={20}
+                          className="text-white/40 group-hover:text-primary/60 transition"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-white/60 group-hover:text-primary/70 transition">
+                            {isUploading
+                              ? "Uploading..."
+                              : "Click to upload media"}
+                          </p>
+                          <p className="text-xs text-white/30 mt-0.5">
+                            Image or video (max 100MB)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="group relative">
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                    Location
+                  </label>
+                  {isLocating ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                      <LoaderCircle size={11} className="animate-spin" />
+                      Fetching
+                    </span>
+                  ) : permissionDenied ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-400">
+                      <TriangleAlert size={11} />
+                      Permission Denied
+                    </span>
+                  ) : form.latitude && form.longitude ? (
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-400">
+                      ✓ Captured
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-2 border-0 border-b border-white/18 py-3">
                   <MapPin
                     size={14}
-                    className={`${
-                      permissionDenied ? "text-red-400" : "text-white/60"
+                    className={`transition ${
+                      permissionDenied
+                        ? "text-red-400"
+                        : isLocating
+                          ? "text-primary/70"
+                          : form.latitude && form.longitude
+                            ? "text-emerald-400"
+                            : "text-white/30"
                     }`}
                   />
                   <span
@@ -265,7 +336,7 @@ function ReportPage() {
                           ? "text-red-300"
                           : form.latitude && form.longitude
                             ? "text-emerald-300"
-                            : "text-white/70"
+                            : "text-white/30"
                     }`}
                   >
                     {isLocating
@@ -278,66 +349,80 @@ function ReportPage() {
                   </span>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={captureCurrentLocation}
                 disabled={isLocating}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/6 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/25 hover:text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:shadow-primary/35 disabled:opacity-60"
               >
-                <Crosshair size={14} />
+                <Crosshair size={16} />
                 {isLocating ? "Fetching location..." : "Use Current Location"}
               </button>
 
-              {permissionDenied ? (
-                <span className="text-xs font-medium text-red-300">
-                  ❌ Location permission required to proceed
-                </span>
-              ) : form.latitude && form.longitude ? (
-                <span className="text-xs text-emerald-300">
-                  ✓ Location captured automatically
-                </span>
-              ) : (
-                <span className="text-xs text-white/55">
-                  Waiting for location...
-                </span>
-              )}
-            </div>
+              {/* Error */}
+              {error ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="flex items-start gap-2 pt-2"
+                >
+                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
+                  <p className="text-xs text-red-400">{error}</p>
+                </motion.div>
+              ) : null}
 
-            {error ? (
-              <div className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-                <TriangleAlert size={14} />
-                {error}
+              {/* Success */}
+              {success ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-2 pt-2"
+                >
+                  <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-400" />
+                  <p className="text-xs text-emerald-400">{success}</p>
+                </motion.div>
+              ) : null}
+
+              {/* Buttons */}
+              <div className="flex flex-wrap gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/feed")}
+                  className="rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/35 hover:text-white"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !form.latitude || !form.longitude}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:shadow-primary/35 disabled:opacity-60"
+                >
+                  <Send size={16} />
+                  {isSubmitting ? "Submitting..." : "Submit Report"}
+                </button>
               </div>
-            ) : null}
+            </form>
+          </div>
 
-            {success ? (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-                {success}
+          <div className="hidden lg:flex flex-col items-center justify-center">
+            {/* 3D layered frame effect */}
+            <div className="relative p-[3px] rounded-[2rem] bg-gradient-to-br from-white/20 via-white/5 to-white/10 shadow-2xl shadow-black/50 w-full max-w-md">
+              <div className="relative rounded-[1.8rem] bg-gradient-to-br from-white/8 to-white/2 p-[2px] shadow-inner shadow-white/5">
+                <div className="overflow-hidden rounded-[1.6rem] border border-white/8 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                  <img
+                    src="/illustration.png"
+                    alt="Report incident illustration"
+                    className="w-full rounded-[1.6rem] object-cover aspect-square"
+                  />
+                </div>
               </div>
-            ) : null}
-
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => navigate("/feed")}
-                className="rounded-xl border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/25"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSubmitting || !form.latitude || !form.longitude}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:shadow-primary/35 disabled:opacity-60"
-              >
-                <Send size={14} />
-                {isSubmitting ? "Submitting..." : "Submit Report"}
-              </button>
+              {/* Bottom reflection shadow */}
+              <div className="absolute -bottom-4 left-6 right-6 h-8 rounded-full bg-black/30 blur-xl" />
             </div>
-          </form>
+          </div>
         </motion.section>
       </div>
     </main>
