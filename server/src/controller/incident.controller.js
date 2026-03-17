@@ -11,13 +11,28 @@ import mongoose from "mongoose";
 import { emitIncidentNearby } from "../sockets/socket.js";
 import { categorizeIncidentDescription } from "../services/ai.service.js";
 
+const shouldCategorizeDescription = (description) => {
+  if (typeof description !== "string") {
+    return false;
+  }
+
+  const normalizedDescription = description.trim();
+
+  return (
+    normalizedDescription.length >= 10 && /[a-zA-Z]/.test(normalizedDescription)
+  );
+};
+
 export const createIncident = asyncHandler(async (req, res) => {
   const { title, description, location, media } = req.body;
   const user = req.user;
+  const normalizedDescription =
+    typeof description === "string" ? description.trim() : description;
+
   if (!user) {
     throw new ApiError(401, "Authentication required");
   }
-  if (!title || !description || !location) {
+  if (!title || !normalizedDescription || !location) {
     throw new ApiError(400, "Title, description, and location are required");
   }
 
@@ -28,11 +43,17 @@ export const createIncident = asyncHandler(async (req, res) => {
     );
   }
 
-  const aiResult = await categorizeIncidentDescription(description);
+  const aiResult = shouldCategorizeDescription(normalizedDescription)
+    ? await categorizeIncidentDescription(normalizedDescription)
+    : {
+        type: "other",
+        severity: "low",
+        summary: normalizedDescription,
+      };
 
   const incidentData = {
     title,
-    description,
+    description: normalizedDescription,
     location: {
       type: "Point",
       coordinates: location.coordinates,
@@ -55,7 +76,7 @@ export const createIncident = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, incident, "Incident created successfully"));
 });
 
-const allowedSeverity = ["controllable", "help-needed", "severe"];
+const allowedSeverity = ["low", "medium", "high"];
 
 export const getAllIncidents = asyncHandler(async (req, res) => {
   const user = req.user;

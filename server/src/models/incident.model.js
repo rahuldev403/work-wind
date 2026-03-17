@@ -38,8 +38,8 @@ const incidentSchema = new mongoose.Schema(
     },
     severity: {
       type: String,
-      enum: ["controllable", "help-needed", "severe"],
-      default: "controllable",
+      enum: ["low", "medium", "high"],
+      default: "low",
       // required: true,
     },
     reportedBy: {
