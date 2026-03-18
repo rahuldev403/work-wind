@@ -6,7 +6,6 @@ import SignUpForm from "./SignUpForm";
 import VerifyOtpForm from "./VerifyOtpForm";
 import { useAuthStore } from "../store/AuthStore";
 
-
 const slideVariants = {
   enter: (direction) => ({
     x: direction > 0 ? 280 : -280,
@@ -22,7 +21,7 @@ const slideVariants = {
   }),
 };
 
-const AuthModal = ({ isOpen, onClose }) => {
+const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [direction, setDirection] = useState(1);
 
@@ -155,7 +154,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                     ) : isLogin ? (
                       <LogInForm
                         onSwitchToSignup={switchToSignup}
-                        onSuccess={onClose}
+                        onSuccess={onAuthSuccess || onClose}
                       />
                     ) : (
                       <SignUpForm onSwitchToLogin={switchToLogin} />

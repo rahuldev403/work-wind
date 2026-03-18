@@ -662,11 +662,10 @@ function LandingPage() {
       </AnimatePresence>
       <AuthModal
         isOpen={showAuth}
-        onClose={() => {
+        onClose={() => setShowAuth(false)}
+        onAuthSuccess={() => {
           setShowAuth(false);
-          if (isAuthenticated) {
-            navigate("/feed");
-          }
+          navigate("/feed");
         }}
       />
     </main>

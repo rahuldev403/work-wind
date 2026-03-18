@@ -1,4 +1,4 @@
-import { geminiService } from "../config/gemini.js";
+import { geminiService } from "../config/ai.js";
 
 const allowedTypes = [
   "theft",
@@ -136,8 +136,7 @@ Respond with only the JSON object.`;
     try {
       const response = await geminiService(prompt);
       const rawText =
-        response?.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-        "";
+        response?.data?.choices?.[0]?.message?.content?.trim() || "";
       const jsonText = extractJsonObject(rawText);
       const parsed = JSON.parse(jsonText);
 
