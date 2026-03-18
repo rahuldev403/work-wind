@@ -4,7 +4,7 @@ StreetGuard AI is a real-time community safety platform where users can report i
 
 ## Landing Page Screenshot
 
-![StreetGuard AI Landing Page](client/public/hero.png)
+![StreetGuard AI Landing Page](client/public/image.png)
 
 ## What It Does
 
