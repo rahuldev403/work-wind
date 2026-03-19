@@ -128,6 +128,13 @@ function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && showAuth) {
+      setShowAuth(false);
+      navigate("/feed");
+    }
+  }, [isAuthenticated, showAuth, navigate]);
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (

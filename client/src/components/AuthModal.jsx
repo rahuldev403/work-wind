@@ -148,7 +148,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                   >
                     {authStep === "verify-signup-otp" ? (
                       <VerifyOtpForm
-                        onSuccess={onClose}
+                        onSuccess={onAuthSuccess || onClose}
                         onBackToLogin={switchToLogin}
                       />
                     ) : isLogin ? (
