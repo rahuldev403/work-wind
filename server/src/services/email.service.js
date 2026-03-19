@@ -1,15 +1,13 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { ENV } from "../config/env.js";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: ENV.email_user,
-    pass: ENV.email_password,
-  },
-});
+const resend = new Resend(ENV.resend_api_key);
 
 export const sendOTPEmail = async (email, otp, purpose) => {
+  if (!ENV.resend_api_key) {
+    throw new Error("Missing RESEND_API_KEY in environment variables");
+  }
+
   const subject = {
     signup: "Verify Your Account",
     "password-reset": "Reset Your Password",
@@ -20,19 +18,23 @@ export const sendOTPEmail = async (email, otp, purpose) => {
     "password-reset": `Your password reset code is: ${otp}. This code will expire in 10 minutes.`,
   }[purpose];
 
-  const mailOptions = {
-    from: ENV.email_user,
+  const fromAddress = ENV.resend_from_email || "onboarding@resend.dev";
+
+  const { error } = await resend.emails.send({
+    from: fromAddress,
     to: email,
-    subject: subject,
+    subject,
     html: `
       <h2>${subject}</h2>
       <p>${message}</p>
       <h1 style="color: #4CAF50;">${otp}</h1>
       <p>If you didn't request this, please ignore this email.</p>
     `,
-  };
+  });
 
-  await transporter.sendMail(mailOptions);
+  if (error) {
+    throw new Error(`Resend email error: ${error.message}`);
+  }
 };
 
 export const sendOtpEmail = sendOTPEmail;
