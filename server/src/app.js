@@ -15,6 +15,12 @@ const globalRateLimiter = rateLimit({
 
 export const app = express();
 
+// Render and other managed hosts terminate TLS at a reverse proxy.
+// Trust the first proxy hop in production so rate-limit and req.ip are correct.
+if (ENV.node_env === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(globalRateLimiter);
